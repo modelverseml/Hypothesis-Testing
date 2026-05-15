@@ -4,6 +4,30 @@ Have you ever come across p-values, t-statistics, or F-values while building reg
 
 All of these questions tie back to hypothesis testing. In this discussion, we’ll break down these concepts step by step and explore them in depth.
 
+## Repository Structure
+
+```
+ml_hypothesis_testing/
+├── README.md
+├── requirements.txt
+├── hypothesis_testing.ipynb   # Worked examples for every section below
+├── z_test.py                  # One/two-sample z-tests
+├── t_test.py                  # One-sample, two-sample, paired t-tests
+├── chi_square_test.py         # Goodness-of-fit and independence tests
+├── anova_f_test.py            # One-way ANOVA + F-test for variances
+├── effect_size_power.py       # Cohen's d, Cramer's V, power analysis
+└── images/
+```
+
+## Getting Started
+
+```bash
+git clone https://github.com/modelverseml/ml-hypothesis-testing.git
+cd ml-hypothesis-testing
+pip install -r requirements.txt
+jupyter notebook hypothesis_testing.ipynb
+```
+
 ## What is Hypothesis Testing?
 
 In statistics and machine learning, we often estimate population parameters (like means, variances, or regression coefficients) using sample data. But how do we know whether these estimates truly reflect the population? Can we trust them?
@@ -262,75 +286,120 @@ Steps :
 - Since χ² (4) > 3.841 → reject H<sub>0</sub> .
 
 ---
-f) ANOVA (Analysis of Variance) / F- Statistics :
 
-→ If we only had 2 groups, we’d just use a t-test. But for 3 or more, doing multiple t-tests increases the chance of error.
+### e) Two-Sample Tests
 
-ANOVA solves this by comparing:
+In ML we often want to compare two distributions: scores from model A vs. model B, response times before vs. after a change, accuracy of treatment vs. control. These are two-sample tests.
 
-- Variation between groups (how far group means are from the overall mean).
+#### Independent two-sample t-test
 
-- Variation within groups (how spread out the data is inside each group).
+Used when the two samples are drawn independently (e.g., two different sets of users).
 
-Formula:
+Formula (equal variances, pooled):
 
- F = Variance between Groups / Variance within Group 
-   = Mean squared between groups / Mean squared within groups 
-   = ​MS<sub>between</sub> / MS<sub>within</sub>
-   
- - MS<sub>between</sub> =  SS<sub>between</sub> / df<sub>between</sub>
-   - SS<sub>between</sub> : Sum of squares between groups (differences of group means from overall mean)
-      - SSB= Σ<sub>g=1</sub><sup>k</sup> n<sub>g</sub> (x̄<sub>g</sub> − x̄<sub>..</sub>)²
-   - df<sub>between</sub> : k−1 (k = number of groups)
- - MS<sub>within</sub>=  SS<sub>within</sub> / df<sub>within</sub>
-   - SS<sub>within</sub> : Sum of squares within groups (variation inside each group).
-      - SSW = Σ<sub>g=1</sub><sup>k</sup> Σ<sub>i=1</sub><sup>n<sub>g</sub></sup> (x<sub>ig</sub> − x̄<sub>g</sub>)²
-   - df<sub>within</sub> : N−k (N = total sample size)
-	
-	​​
+t = (x̄<sub>1</sub> − x̄<sub>2</sub>) / √( s<sup>2</sup><sub>p</sub> · (1/n<sub>1</sub> + 1/n<sub>2</sub>) )
+
+where s<sup>2</sup><sub>p</sub> = ((n<sub>1</sub>−1)·s<sub>1</sub><sup>2</sup> + (n<sub>2</sub>−1)·s<sub>2</sub><sup>2</sup>) / (n<sub>1</sub>+n<sub>2</sub>−2)
+
+- df = n<sub>1</sub> + n<sub>2</sub> − 2
+- If variances are unequal, use **Welch's t-test** (Satterthwaite df, no pooling).
+
+Example: Model A average accuracy 0.82, Model B average accuracy 0.85 over 30 runs each. Does the difference reflect a real improvement or noise? See `t_test.py → TTest.two_sample_independent`.
+
+#### Paired t-test
+
+Used when the same units are measured twice (before/after a training, A/B on the same users).
+
+Formula: apply a one-sample t-test on the within-pair differences d<sub>i</sub> = x<sub>i,after</sub> − x<sub>i,before</sub> against μ<sub>0</sub> = 0.
+
+t = d̄ / (s<sub>d</sub> / √n)  ,  df = n − 1
+
+Pairing removes between-subject variance, so paired tests usually have more statistical power than independent ones when applicable.
+
+---
+
+### f) ANOVA (Analysis of Variance) / F-Test
+
+When we have **three or more groups**, running pairwise t-tests inflates the false-positive rate. ANOVA tests whether *any* group mean differs:
+
+- **H<sub>0</sub>:** μ<sub>1</sub> = μ<sub>2</sub> = … = μ<sub>k</sub>
+- **H<sub>1</sub>:** at least one μ<sub>i</sub> differs
+
+The F-statistic compares variance **between** groups to variance **within** groups:
+
+F = MS<sub>between</sub> / MS<sub>within</sub>
+
+where
+- SS<sub>between</sub> = Σ n<sub>i</sub> · (x̄<sub>i</sub> − x̄)<sup>2</sup>
+- SS<sub>within</sub>  = Σ Σ (x<sub>ij</sub> − x̄<sub>i</sub>)<sup>2</sup>
+- df<sub>between</sub> = k − 1
+- df<sub>within</sub>  = N − k
+- MS = SS / df
+
 <p align="center">
-<img src="images/F-distribution.png" alt="F Distribution" height="350" width="45%"/>
- <img src="images/F-table.png" alt="F - Statistics Values" height="350" width="45%"/>
+<img src="images/F-distribution.png" alt="F Distribution" height="400" width="45%"/>
+<img src="images/F-table.png" alt="F Table" height="400" width="45%"/>
 </p>
 
-Example : 
-Data (scores by teaching method)
-- Group A: 85, 90, 88
-- Group B: 75, 78, 94
-- Group C: 92, 94, 96
+**Decision rule:** if F > F<sub>critical</sub> (or p < α), reject H<sub>0</sub>.
 
-Steps :
+Example: comparing three training algorithms over 25 evaluation runs each, see `anova_f_test.py → AnovaFTest.one_way`.
 
-- Hypothesis :
-  - H <sub>0</sub> : μ<sub>A</sub> ​= μ<sub>B</sub> ​= μ<sub>C</sub>
-  - H <sub>1</sub> : At least one group mean is different
-- Parameters
-  - n<sub>A</sub> = 3 , n<sub>B</sub> = 3, n<sub>C</sub> = 3
-  - Number of groups k=3.
-  - Grouped means
-    - x̄<sub>A</sub> = (85+90+88)/3 = 87.67
-    - x̄<sub>B</sub> = 75.67
-    - x̄<sub>C</sub> = 94
-  - x̄ = 85.78 (overall mean)
+The same F-distribution underlies the **F-test for equality of variances** (ratio of two sample variances), useful as a pre-check before deciding between Student's and Welch's t-test.
 
- - SSB = n<sub>A</sub> × ((x̄<sub>A</sub> - x̄ )<sup>2</sup>) + n<sub>B</sub> × ((x̄<sub>B</sub> - x̄ )<sup>2</sup>) + n<sub>C</sub> × ((x̄<sub>C</sub> - x̄ )<sup>2</sup>) = 521.37
- - SSW
-   - Group A = Σ<sub>i=1</sub><sup>n<sub>A</sub></sup> (x<sub>iA</sub> − x̄<sub>A</sub>)² = (85 - 87.6)<sup>2</sup> + (90 - 87.6)<sup>2</sup> + (88 - 87.6)<sup>2</sup> = 7.11
-   - Group B = Σ<sub>i=1</sub><sup>n<sub>B</sub></sup> (x<sub>iB</sub> − x̄<sub>B</sub>)² = 10.66
-   - Group C = Σ<sub>i=1</sub><sup>n<sub>C</sub></sup> (x<sub>iC</sub> − x̄<sub>C</sub>)² = 8
-   - SSW = Σ Groups = 7.11 + 10.66 + 8 = 25.77
- - df<sub>between</sub> =  k−1 (k = number of groups) = 3 - 1 = 2 (df<sub>1</sub>)
- - df<sub>within</sub> : N−k (N = total sample size) = 9 - 3 = 6 (df<sub>2</sub>)
-- MS<sub>between</sub> =  SS<sub>between</sub> / df<sub>between</sub> = 521.37 / 2 = 260.68
-- MS<sub>within</sub>=  SS<sub>within</sub> / df<sub>within</sub> = 25.77 / 6 = 4.3
-- F = ​MS<sub>between</sub> / MS<sub>within</sub> = 260.68 / 4.3 = 60.62
-- From f-table df<sub>1</sub> = 2,df<sub>2</sub> = 2, α=0.05
-  -  F - critical = 5.14
- 
-- F - statistic (60.62) > F - critical (5.14)  → reject H<sub>0</sub> 
-  
- 
-      
-	​
+---
 
- ​​
+### g) Effect Size & Statistical Power
+
+A p-value tells you **whether** a difference is unlikely under H<sub>0</sub>; it does **not** tell you **how large** the difference is. With a large enough sample, even trivial differences become "significant." That is why every hypothesis test should be reported alongside an **effect size**.
+
+#### Common effect sizes
+
+| Test | Effect size | Formula | Small / Medium / Large |
+|---|---|---|---|
+| One-sample t | Cohen's d | (x̄ − μ<sub>0</sub>) / s | 0.2 / 0.5 / 0.8 |
+| Two-sample t | Cohen's d | (x̄<sub>1</sub> − x̄<sub>2</sub>) / s<sub>pooled</sub> | 0.2 / 0.5 / 0.8 |
+| Two proportions | Cohen's h | 2·arcsin(√p<sub>1</sub>) − 2·arcsin(√p<sub>2</sub>) | 0.2 / 0.5 / 0.8 |
+| Chi-square independence | Cramer's V | √(χ<sup>2</sup> / (n · min(r−1, c−1))) | 0.1 / 0.3 / 0.5 |
+
+#### Statistical Power
+
+Power = P(reject H<sub>0</sub> | H<sub>1</sub> is true) = 1 − β
+
+It depends on four interlinked quantities — fix any three and the fourth is determined:
+
+1. **α** (significance level)
+2. **Effect size**
+3. **Sample size (n)**
+4. **Power (1 − β)** — typically 0.80 by convention
+
+Common uses:
+- **Sample size planning**: given a target effect size and α=0.05, power=0.80, how many observations do I need?
+- **Post-hoc check**: my experiment failed to reject H<sub>0</sub> — was it underpowered, or is there genuinely no effect?
+- **Minimum detectable effect**: with my fixed n, what is the smallest effect I can reliably catch?
+
+See `effect_size_power.py → PowerAnalysis` and the power curves cell in the notebook.
+
+---
+
+## Choosing the Right Test
+
+| Scenario | Test |
+|---|---|
+| One sample, σ known | Z-test |
+| One sample, σ unknown | One-sample t-test |
+| Two independent samples | Independent t-test (pooled or Welch) |
+| Paired observations | Paired t-test |
+| 3+ group means | One-way ANOVA |
+| Equality of two variances | F-test for variances |
+| Categorical distribution vs. expected | Chi-square goodness-of-fit |
+| Two categorical variables independent? | Chi-square independence |
+
+---
+
+## References
+
+- Casella, G. & Berger, R. L. — *Statistical Inference*
+- Cohen, J. — *Statistical Power Analysis for the Behavioral Sciences*
+- SciPy documentation: `scipy.stats`
+- statsmodels documentation: `statsmodels.stats.power`
