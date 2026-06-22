@@ -21,6 +21,9 @@ env/
 # Jupyter
 .ipynb_checkpoints/
 
+# Generated figures
+images/power_curves.png
+
 # IDE
 .vscode/
 .idea/

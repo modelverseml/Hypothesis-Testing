@@ -7,26 +7,50 @@ All of these questions tie back to hypothesis testing. In this discussion, we’
 ## Repository Structure
 
 ```
-ml_hypothesis_testing/
+Hypothesis-Testing/
 ├── README.md
 ├── requirements.txt
-├── hypothesis_testing.ipynb   # Worked examples for every section below
-├── z_test.py                  # One/two-sample z-tests
-├── t_test.py                  # One-sample, two-sample, paired t-tests
-├── chi_square_test.py         # Goodness-of-fit and independence tests
-├── anova_f_test.py            # One-way ANOVA + F-test for variances
-├── effect_size_power.py       # Cohen's d, Cramer's V, power analysis
+├── main.py                        # runs all examples + the power plot
+├── hypothesis_tests/              # the package (importable)
+│   ├── __init__.py
+│   ├── z_test.py                  # one/two-sample z-tests
+│   ├── t_test.py                  # one-sample, two-sample, paired t-tests
+│   ├── chi_square_test.py         # goodness-of-fit and independence tests
+│   ├── anova_f_test.py            # one-way ANOVA + F-test for variances
+│   └── effect_size_power.py       # Cohen's d, Cramer's V, power analysis
+├── examples/
+│   ├── worked_examples.py         # runnable example for every section below
+│   └── power_curves.py            # plots power vs. sample size
 └── images/
 ```
 
 ## Getting Started
 
 ```bash
-git clone https://github.com/modelverseml/ml-hypothesis-testing.git
-cd ml-hypothesis-testing
+git clone <your-fork-url> Hypothesis-Testing
+cd Hypothesis-Testing
 pip install -r requirements.txt
-jupyter notebook hypothesis_testing.ipynb
+
+# Run everything: all worked examples + the power-curves plot
+python main.py
+
+# Or run the pieces individually
+python examples/worked_examples.py        # every worked example
+python examples/power_curves.py           # power curves -> images/power_curves.png
 ```
+
+### Using the package in your own code
+
+```python
+from hypothesis_tests import TTest
+
+t_test = TTest(alpha=0.05, tail="two")
+result = t_test.one_sample([32, 31, 29, 33, 30], pop_mean=30)
+print(result["p_value"], result["reject_null"])
+```
+
+Each test returns a plain dictionary (statistic, degrees of freedom, p-value,
+critical value, and the reject/fail-to-reject decision).
 
 ## What is Hypothesis Testing?
 
@@ -304,7 +328,7 @@ where s<sup>2</sup><sub>p</sub> = ((n<sub>1</sub>−1)·s<sub>1</sub><sup>2</sup
 - df = n<sub>1</sub> + n<sub>2</sub> − 2
 - If variances are unequal, use **Welch's t-test** (Satterthwaite df, no pooling).
 
-Example: Model A average accuracy 0.82, Model B average accuracy 0.85 over 30 runs each. Does the difference reflect a real improvement or noise? See `t_test.py → TTest.two_sample_independent`.
+Example: Model A average accuracy 0.82, Model B average accuracy 0.85 over 30 runs each. Does the difference reflect a real improvement or noise? See `hypothesis_tests/t_test.py → TTest.two_sample_independent`.
 
 #### Paired t-test
 
@@ -343,7 +367,7 @@ where
 
 **Decision rule:** if F > F<sub>critical</sub> (or p < α), reject H<sub>0</sub>.
 
-Example: comparing three training algorithms over 25 evaluation runs each, see `anova_f_test.py → AnovaFTest.one_way`.
+Example: comparing three training algorithms over 25 evaluation runs each, see `hypothesis_tests/anova_f_test.py → AnovaFTest.one_way`.
 
 The same F-distribution underlies the **F-test for equality of variances** (ratio of two sample variances), useful as a pre-check before deciding between Student's and Welch's t-test.
 
@@ -378,7 +402,7 @@ Common uses:
 - **Post-hoc check**: my experiment failed to reject H<sub>0</sub> — was it underpowered, or is there genuinely no effect?
 - **Minimum detectable effect**: with my fixed n, what is the smallest effect I can reliably catch?
 
-See `effect_size_power.py → PowerAnalysis` and the power curves cell in the notebook.
+See `hypothesis_tests/effect_size_power.py → PowerAnalysis` and `examples/power_curves.py` for the power curves plot.
 
 ---
 
