@@ -27,7 +27,7 @@ Hypothesis-Testing/
 ## Getting Started
 
 ```bash
-git clone <your-fork-url> Hypothesis-Testing
+git clone https://github.com/modelverseml/Hypothesis-Testing.git
 cd Hypothesis-Testing
 pip install -r requirements.txt
 
